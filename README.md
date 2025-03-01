@@ -5,6 +5,7 @@
 - `app/` - Flask web application
   - `app.py` - Main Flask application
   - `templates/` - HTML templates
+- `model/` - Trained models (only uploaded 3 stocks here)
 - `src/` - Core modules
   - `stock_predictor.py` - Main StockPricePredictor class
   - `data_utils.py` - Data processing
