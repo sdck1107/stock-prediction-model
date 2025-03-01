@@ -1,17 +1,4 @@
-# Stock Price Prediction System
 
-A machine learning system for stock price prediction with LSTM/GRU models and a Flask API.
-
-## Overview
-
-This project uses deep learning (LSTM and GRU) to predict stock prices with features including:
-
-- Multiple stock analysis and comparison
-- Technical indicator features
-- Risk assessment
-- Backtesting capabilities
-- Confidence intervals
-- Interactive web interface
 
 ## Project Structure
 
