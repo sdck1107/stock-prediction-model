@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Prediction Chatbot</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+        }
+        .chat-container {
+            height: 400px;
+            overflow-y: auto;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border-radius: 10px;
+            border: 1px solid #dee2e6;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            border-radius: 18px;
+            max-width: 80%;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            position: relative;
+            clear: both;
+        }
+        .user-message {
+            background-color: #dcf8c6;
+            float: right;
+            border-bottom-right-radius: 5px;
+        }
+        .bot-message {
+            background-color: #ffffff;
+            float: left;
+            border-bottom-left-radius: 5px;
+        }
+        .message-time {
+            font-size: 0.7rem;
+            color: #999;
+            text-align: right;
+            margin-top: 3px;
+        }
+        .input-group {
+            margin-top: 15px;
+        }
+        .stock-info {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .risk-low {
+            color: green;
+            font-weight: bold;
+        }
+        .risk-medium {
+            color: orange;
+            font-weight: bold;
+        }
+        .risk-high {
+            color: red;
+            font-weight: bold;
+        }
+        .card {
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            font-weight: bold;
+            border-top-left-radius: 15px !important;
+            border-top-right-radius: 15px !important;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+        .btn-primary:hover {
+            background-color: #0069d9;
+            border-color: #0062cc;
+        }
+        .suggestion-btn {
+            margin: 5px;
+            font-size: 0.9rem;
+        }
+        .plot-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .plot-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .advice-box {
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #007bff;
+        }
+        .metrics-table {
+            width: 100%;
+            margin-top: 15px;
+        }
+        .metrics-table td {
+            padding: 5px 0;
+        }
+        .metrics-table td:first-child {
+            font-weight: bold;
+            width: 60%;
+        }
+        .ticker-suggestions {
+            margin-top: 10px;
+        }
+        .clear-button {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            cursor: pointer;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4 mb-5">
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <h1 class="text-center mb-4">Stock Prediction Chatbot</h1>
+                <p class="text-center text-muted mb-4">Enter a stock ticker symbol (e.g., AAPL, MSFT, GOOGL) to get prediction analysis and investment advice</p>
+                
+                <div class="row">
+                    <div class="col-lg-6">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                Chat Window
+                                <button class="btn btn-sm btn-outline-secondary clear-button" id="clearChat">
+                                    <i class="fas fa-trash-alt"></i> Clear Chat
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div class="chat-container" id="chatContainer">
+                                    <div class="message bot-message">
+                                        Please enter the stock ticker symbol you want to analyze (e.g., AAPL for Apple Inc.).
+                                        <div class="message-time">Today <span id="currentTime"></span></div>
+                                    </div>
+                                </div>
+                                <div class="loading" id="loading">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p>Analyzing stock data, this may take a few minutes, please be patient...</p>
+                                </div>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="userInput" placeholder="Enter stock ticker (e.g., AAPL)">
+                                    <button class="btn btn-primary" id="sendButton">
+                                        <i class="fas fa-paper-plane"></i> Send
+                                    </button>
+                                </div>
+                                <div class="ticker-suggestions mt-2" id="tickerSuggestions">
+                                    <!-- Trained stock buttons will be dynamically added here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-6">
+                        <div class="card" id="stockInfoCard" style="display:none;">
+                            <div class="card-header">
+                                <span id="stockInfoTitle">Stock Analysis Results</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="stock-info" id="stockInfo">
+                                    <!-- Stock information will be displayed here -->
+                                </div>
+                                <div class="plot-container" id="plotContainer">
+                                    <!-- Charts will be displayed here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                About This Service
+                            </div>
+                            <div class="card-body">
+                                <p>This stock prediction chatbot uses deep learning techniques (LSTM, GRU) to analyze historical stock data and predict future trends. Each prediction is based on the following factors:</p>
+                                <ul>
+                                    <li>Historical price trends and volatility</li>
+                                    <li>Technical indicators (moving averages, RSI, MACD, etc.)</li>
+                                    <li>Risk assessment (based on prediction errors and volatility)</li>
+                                </ul>
+                                <p class="text-muted"><small>Disclaimer: Predictions provided by this service are for reference only and do not constitute investment advice. Please conduct thorough research and consult professional advice before investing.</small></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set current time
+            const now = new Date();
+            document.getElementById('currentTime').textContent = 
+                now.getHours().toString().padStart(2, '0') + ':' + 
+                now.getMinutes().toString().padStart(2, '0');
+            
+            // Get element references
+            const chatContainer = document.getElementById('chatContainer');
+            const userInput = document.getElementById('userInput');
+            const sendButton = document.getElementById('sendButton');
+            const stockInfoCard = document.getElementById('stockInfoCard');
+            const stockInfoTitle = document.getElementById('stockInfoTitle');
+            const stockInfo = document.getElementById('stockInfo');
+            const plotContainer = document.getElementById('plotContainer');
+            const loading = document.getElementById('loading');
+            const clearChatButton = document.getElementById('clearChat');
+            const tickerSuggestions = document.getElementById('tickerSuggestions');
+
+            // Get API base URL
+            const API_BASE_URL = window.location.hostname === 'localhost' 
+                ? 'http://localhost:5000' 
+                : window.location.origin; // Use same hostname in actual deployment
+            
+            // Load trained stock model list
+            loadTrainedTickers();
+            
+            // Add event listeners
+            sendButton.addEventListener('click', sendMessage);
+            userInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+            clearChatButton.addEventListener('click', clearChat);
+
+            function loadTrainedTickers() {
+                fetch(`${API_BASE_URL}/api/tickers`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.tickers && data.tickers.length > 0) {
+                        tickerSuggestions.innerHTML = '<p class="mb-1 text-muted">Trained models:</p>';
+                        data.tickers.forEach(ticker => {
+                            const btn = document.createElement('button');
+                            btn.className = 'btn btn-sm btn-outline-secondary suggestion-btn';
+                            btn.textContent = ticker;
+                            btn.addEventListener('click', function() {
+                                userInput.value = ticker;
+                                sendMessage();
+                            });
+                            tickerSuggestions.appendChild(btn);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading tickers:', error);
+                });
+            }
+
+            function clearChat() {
+                // Keep the first bot message
+                const firstMessage = chatContainer.querySelector('.message');
+                chatContainer.innerHTML = '';
+                if (firstMessage) {
+                    chatContainer.appendChild(firstMessage);
+                }
+                
+                // Hide stock info card
+                stockInfoCard.style.display = 'none';
+            }
+
+            function sendMessage() {
+                const message = userInput.value.trim();
+                if (message === '') return;
+
+                // Add user message to chat
+                addMessage(message, 'user');
+                userInput.value = '';
+
+                // Show loading indicator
+                loading.style.display = 'block';
+
+                // Check if it's a stock ticker
+                if (isStockTicker(message)) {
+                    // Process stock ticker
+                    processStockTicker(message.toUpperCase());
+                } else {
+                    // Process general chat
+                    setTimeout(() => {
+                        addMessage('Please enter a valid stock ticker symbol (e.g., AAPL for Apple Inc., MSFT for Microsoft Corp.).', 'bot');
+                        loading.style.display = 'none';
+                    }, 1000);
+                }
+            }
+
+            function addMessage(text, sender) {
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message');
+                messageDiv.classList.add(sender === 'user' ? 'user-message' : 'bot-message');
+                
+                // Message content
+                messageDiv.textContent = text;
+                
+                // Add timestamp
+                const timeDiv = document.createElement('div');
+                timeDiv.classList.add('message-time');
+                const now = new Date();
+                timeDiv.textContent = 'Today ' + 
+                    now.getHours().toString().padStart(2, '0') + ':' + 
+                    now.getMinutes().toString().padStart(2, '0');
+                
+                messageDiv.appendChild(timeDiv);
+                chatContainer.appendChild(messageDiv);
+                
+                // Clear float
+                const clearDiv = document.createElement('div');
+                clearDiv.style.clear = 'both';
+                chatContainer.appendChild(clearDiv);
+                
+                // Scroll to bottom
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+
+            function isStockTicker(text) {
+                // Simple stock ticker validation - can be improved
+                return /^[A-Za-z]{1,5}$/.test(text);
+            }
+
+            function processStockTicker(ticker) {
+                addMessage(`Analyzing stock data for ${ticker}, please wait... This may take a few minutes, especially if a new model needs to be trained.`, 'bot');
+
+                fetch(`${API_BASE_URL}/api/predict`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ticker: ticker}),
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network request failed');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.error) {
+                        addMessage(`Sorry, an error occurred while processing ${ticker}: ${data.error}`, 'bot');
+                        return;
+                    }
+
+                    // Display results in chat
+                    addMessage(`The current price of ${ticker} is $${data.current_price.toFixed(2)}`, 'bot');
+                    
+                    const riskLevelText = data.risk_level === 'Low Risk' ? 'Low Risk (Suitable for conservative investors)' :
+                                         data.risk_level === 'Medium Risk' ? 'Medium Risk (Suitable for balanced investors)' :
+                                         data.risk_level === 'High Risk' ? 'High Risk (Only suitable for aggressive investors)' : 
+                                         'Unknown Risk';
+                    
+                    addMessage(`Risk Assessment: ${riskLevelText}`, 'bot');
+                    addMessage(data.advice, 'bot');
+
+                    // Update stock info panel
+                    displayStockInfo(data);
+                    stockInfoTitle.textContent = `${ticker} Stock Analysis Results`;
+                    stockInfoCard.style.display = 'block';
+                    
+                    // Update trained stock list
+                    loadTrainedTickers();
+                })
+                .catch(error => {
+                    addMessage(`Sorry, an error occurred while processing your request: ${error.message}`, 'bot');
+                })
+                .finally(() => {
+                    loading.style.display = 'none';
+                });
+            }
+
+            function displayStockInfo(data) {
+                const ticker = data.ticker;
+                const currentPrice = data.current_price.toFixed(2);
+                const riskLevel = data.risk_level || 'Unknown';
+                const metrics = data.metrics || {};
+                
+                // Get future prices for simple trend analysis
+                const predictionValues = Object.values(data.prediction);
+                const lastPredictedPrice = predictionValues[predictionValues.length - 1].toFixed(2);
+                const priceChange = ((lastPredictedPrice - currentPrice) / currentPrice * 100).toFixed(2);
+                const trend = priceChange >= 0 ? 'Up' : 'Down';
+                
+                // Set color based on risk level
+                let riskLevelHtml;
+                if (riskLevel === 'Low Risk') {
+                    riskLevelHtml = `<span class="risk-low">Low Risk</span>`;
+                } else if (riskLevel === 'Medium Risk') {
+                    riskLevelHtml = `<span class="risk-medium">Medium Risk</span>`;
+                } else if (riskLevel === 'High Risk') {
+                    riskLevelHtml = `<span class="risk-high">High Risk</span>`;
+                } else {
+                    riskLevelHtml = `<span>Unknown Risk</span>`;
+                }
+
+                let html = `
+                    <h4 class="mb-3">${ticker} Stock Analysis</h4>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="metrics-table">
+                                <tr>
+                                    <td>Current Price:</td>
+                                    <td>$${currentPrice}</td>
+                                </tr>
+                                <tr>
+                                    <td>Predicted Price in 30 Days:</td>
+                                    <td>$${lastPredictedPrice}</td>
+                                </tr>
+                                <tr>
+                                    <td>Expected Change:</td>
+                                    <td>${trend} ${Math.abs(priceChange)}%</td>
+                                </tr>
+                                <tr>
+                                    <td>Risk Level:</td>
+                                    <td>${riskLevelHtml}</td>
+                                </tr>
+                            </table>
+                        </div>
+                `;
+                
+                // Add metrics (if available)
+                if (metrics && metrics.rmse) {
+                    html += `
+                        <div class="col-md-6">
+                            <table class="metrics-table">
+                                <tr>
+                                    <td>Root Mean Square Error (RMSE):</td>
+                                    <td>${metrics.rmse.toFixed(2)}</td>
+                                </tr>
+                                <tr>
+                                    <td>Mean Absolute Percentage Error (MAPE):</td>
+                                    <td>${metrics.mape.toFixed(2)}%</td>
+                                </tr>
+                                <tr>
+                                    <td>Volatility:</td>
+                                    <td>${metrics.volatility.toFixed(2)}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    `;
+                }
+                
+                // End row
+                html += `</div>`;
+                
+                // Add advice
+                html += `
+                    <div class="advice-box">
+                        <h5><i class="fas fa-lightbulb"></i> Investment Advice</h5>
+                        <p>${data.advice}</p>
+                    </div>
+                `;
+                
+                stockInfo.innerHTML = html;
+                
+                // Display chart
+                if (data.plot_img) {
+                    plotContainer.innerHTML = `<img src="data:image/png;base64,${data.plot_img}" alt="${ticker} Prediction Chart">`;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
